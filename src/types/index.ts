@@ -4,3 +4,4 @@ export * from './operation.ts';
 export * from './tools.ts';
 export * from './cursor.ts';
 export * from './events.ts';
+export * from './whiteboard.ts';
