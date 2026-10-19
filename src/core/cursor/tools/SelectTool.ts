@@ -12,6 +12,7 @@ import {
   computeResizedBounds,
   getHandleCursor,
 } from './resizeMath.ts';
+import { computeMoveSnap } from './snapMath.ts';
 
 type SelectMode = 'idle' | 'moving' | 'resizing' | 'marquee';
 
@@ -53,6 +54,7 @@ export class SelectTool extends BaseTool {
       }
       this.mode = 'moving';
       this.startPoint = { ...worldPoint };
+      this.initialBounds = selection.getBounds(this.whiteboard.shapes);
       this.captureSnapshots();
     } else {
       if (!rawEvent.shiftKey) {
@@ -66,8 +68,43 @@ export class SelectTool extends BaseTool {
   public onPointerMove(e: ToolEvent): void {
     if (this.mode === 'idle' || !this.startPoint) return;
     if (this.mode === 'moving') {
-      const dx = e.worldPoint.x - this.startPoint.x;
-      const dy = e.worldPoint.y - this.startPoint.y;
+      const rawDx = e.worldPoint.x - this.startPoint.x;
+      const rawDy = e.worldPoint.y - this.startPoint.y;
+
+      let dx = rawDx;
+      let dy = rawDy;
+
+      // Allow holding Alt/Option key to suppress magnetic snapping
+      const allowSnap = !e.rawEvent.altKey;
+
+      if (allowSnap && this.initialBounds) {
+        const tentativeBounds: Bounds = {
+          minX: this.initialBounds.minX + rawDx,
+          minY: this.initialBounds.minY + rawDy,
+          maxX: this.initialBounds.maxX + rawDx,
+          maxY: this.initialBounds.maxY + rawDy,
+          width: this.initialBounds.width,
+          height: this.initialBounds.height,
+        };
+
+        const selectedIds = new Set(this.initialSnapshots.keys());
+        const stationaryBounds: Bounds[] = [];
+        for (const [id, shape] of this.whiteboard.shapes) {
+          if (!selectedIds.has(id)) {
+            stationaryBounds.push(shape.getBounds());
+          }
+        }
+
+        const zoom = this.whiteboard.drawer.viewport.getTransform().zoom;
+        const snap = computeMoveSnap(tentativeBounds, stationaryBounds, zoom);
+
+        dx = rawDx + snap.adjustedDx;
+        dy = rawDy + snap.adjustedDy;
+
+        this.whiteboard.setSnapGuides(snap.guides);
+      } else {
+        this.whiteboard.setSnapGuides(null);
+      }
 
       for (const [id, initial] of this.initialSnapshots) {
         const shape = this.whiteboard.shapes.get(id);
@@ -103,6 +140,8 @@ export class SelectTool extends BaseTool {
   }
 
   public onPointerUp(e: ToolEvent): void {
+    this.whiteboard.setSnapGuides(null);
+
     if (this.mode === 'moving' || this.mode === 'resizing') {
       for (const [id, initial] of this.initialSnapshots) {
         const shape = this.whiteboard.shapes.get(id);
@@ -194,5 +233,6 @@ export class SelectTool extends BaseTool {
     this.initialBounds = null;
     this.initialSnapshots.clear();
     this.whiteboard.setMarquee(null);
+    this.whiteboard.setSnapGuides(null);
   }
 }

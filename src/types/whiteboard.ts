@@ -1,4 +1,4 @@
-import type { Bounds, Point } from './geometry.ts';
+import type { Bounds, Point, SnapLine } from './geometry.ts';
 import type { ShapeStyle, SerializedShape } from './shape.ts';
 import type { BaseShape } from '../core/shapes/BaseShape.ts';
 import type { Drawer } from '../core/drawer/Drawer.ts';
@@ -25,6 +25,7 @@ export interface IWhiteboardContext {
   clearSelection(): void;
   setPreviewShape(shape: BaseShape | null): void;
   setMarquee(bounds: Bounds | null): void;
+  setSnapGuides(guides: SnapLine[] | null): void;
   broadcastCursorMove(worldPoint: Point): void;
   requestRender(): void;
 }

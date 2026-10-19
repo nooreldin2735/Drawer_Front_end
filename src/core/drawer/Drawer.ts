@@ -1,4 +1,4 @@
-import type { Bounds } from '../../types/index.ts';
+import type { Bounds, SnapLine } from '../../types/index.ts';
 import { BaseShape } from '../shapes/BaseShape.ts';
 import { Renderer } from './services/Renderer.ts';
 import { ViewportService } from './services/ViewportService.ts';
@@ -21,6 +21,7 @@ export class Drawer {
   private shapesGetter: ShapesProvider | null = null;
   private previewShape: BaseShape | null = null;
   private marqueeBounds: Bounds | null = null;
+  private snapGuides: SnapLine[] = [];
   private customOverlayCallback: OverlayDrawCallback | null = null;
 
   public readonly renderer: Renderer;
@@ -65,6 +66,7 @@ export class Drawer {
     this.shapesGetter = null;
     this.previewShape = null;
     this.marqueeBounds = null;
+    this.snapGuides = [];
     this.customOverlayCallback = null;
   }
 
@@ -88,6 +90,14 @@ export class Drawer {
    */
   public setMarquee(bounds: Bounds | null): void {
     this.marqueeBounds = bounds;
+    this.requestRender();
+  }
+
+  /**
+   * Sets active magnetic snap guide lines to render.
+   */
+  public setSnapGuides(guides: SnapLine[] | null): void {
+    this.snapGuides = guides ? [...guides] : [];
     this.requestRender();
   }
 
@@ -137,7 +147,12 @@ export class Drawer {
       this.drawMarquee(ctx, this.marqueeBounds, zoom);
     }
 
-    // 7. Custom overlay (e.g. remote cursors in world space)
+    // 7. Render magnetic snap / alignment guide lines
+    if (this.snapGuides.length > 0) {
+      this.drawSnapGuides(ctx, this.snapGuides, zoom);
+    }
+
+    // 8. Custom overlay (e.g. remote cursors in world space)
     if (this.customOverlayCallback) {
       this.customOverlayCallback(ctx, zoom);
     }
@@ -160,6 +175,50 @@ export class Drawer {
     ctx.lineWidth = 1 / zoom;
     ctx.fillRect(bounds.minX, bounds.minY, bounds.width, bounds.height);
     ctx.strokeRect(bounds.minX, bounds.minY, bounds.width, bounds.height);
+    ctx.restore();
+  }
+
+  /**
+   * Draws magnetic alignment snap guide lines with subtle endpoint anchor markers.
+   */
+  private drawSnapGuides(
+    ctx: CanvasRenderingContext2D,
+    guides: SnapLine[],
+    zoom: number
+  ): void {
+    ctx.save();
+    ctx.strokeStyle = '#f43f5e';
+    ctx.fillStyle = '#f43f5e';
+    ctx.lineWidth = 1.25 / zoom;
+
+    const tickRadius = 2.5 / zoom;
+
+    for (const guide of guides) {
+      ctx.beginPath();
+      ctx.setLineDash([4 / zoom, 3 / zoom]);
+      if (guide.orientation === 'vertical') {
+        ctx.moveTo(guide.position, guide.start);
+        ctx.lineTo(guide.position, guide.end);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(guide.position, guide.start, tickRadius, 0, Math.PI * 2);
+        ctx.arc(guide.position, guide.end, tickRadius, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.moveTo(guide.start, guide.position);
+        ctx.lineTo(guide.end, guide.position);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(guide.start, guide.position, tickRadius, 0, Math.PI * 2);
+        ctx.arc(guide.end, guide.position, tickRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     ctx.restore();
   }
 }

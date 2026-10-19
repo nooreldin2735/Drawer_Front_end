@@ -5,6 +5,7 @@ import type {
   Point,
   SerializedShape,
   ShapeStyle,
+  SnapLine,
   ToolType,
   WhiteboardEventType,
   WhiteboardListener,
@@ -162,6 +163,7 @@ export class Whiteboard implements IWhiteboardContext {
   public getActiveStyle(): ShapeStyle { return { ...this.activeStyle }; }
   public setPreviewShape(shape: BaseShape | null): void { this.drawer.setPreviewShape(shape); }
   public setMarquee(bounds: Bounds | null): void { this.drawer.setMarquee(bounds); }
+  public setSnapGuides(guides: SnapLine[] | null): void { this.drawer.setSnapGuides(guides); }
   public requestRender(): void { this.drawer.requestRender(); }
 
   public selectShape(id: string, additive = false): void {

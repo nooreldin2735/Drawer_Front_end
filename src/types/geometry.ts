@@ -49,3 +49,23 @@ export interface ResizeHandleInfo {
   y: number;
   size: number;
 }
+
+/**
+ * Visual alignment / magnetic snap guide line.
+ */
+export interface SnapLine {
+  orientation: 'horizontal' | 'vertical';
+  position: number;
+  start: number;
+  end: number;
+}
+
+/**
+ * Result of magnetic snapping calculations.
+ */
+export interface SnapResult {
+  adjustedDx: number;
+  adjustedDy: number;
+  guides: SnapLine[];
+}
+
