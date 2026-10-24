@@ -126,7 +126,27 @@ export class OperationService {
     this.onChange();
   }
 
-  public applyOperation(op: WhiteboardOperation): void {
+  public applyOperation(
+    op:
+      | WhiteboardOperation
+      | { type: 'snapshot'; shapes: SerializedShape[]; version?: number }
+  ): void {
+    if (op.type === 'snapshot') {
+      this.shapes.clear();
+      if (Array.isArray(op.shapes)) {
+        for (const sData of op.shapes) {
+          const s = this.shapeFactory.fromJSON(sData);
+          this.shapes.set(s.id, s);
+        }
+      }
+      if (op.version !== undefined) {
+        this.version = op.version;
+      }
+      this.drawer.requestRender();
+      this.onChange();
+      return;
+    }
+
     if (op.type === 'shape:add') {
       const s = this.shapeFactory.fromJSON(op.payload.shape);
       this.shapes.set(s.id, s);
